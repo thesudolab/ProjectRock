@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Rock // Network Dashboard</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+        :root {
+            --bg-root:    #080b10;
+            --bg-panel:   #0d1117;
+            --bg-card:    #111620;
+            --bg-row:     #0f141c;
+            --bg-hover:   #161d29;
+            --border:     #1e2736;
+            --border-hi:  #253044;
+
+            --text-pri:   #cdd9f0;
+            --text-sec:   --text-sec; /* Fallback resolved below */
+            --text-sec-real: #6b7fa3;
+            --text-dim:   #3a4a63;
+            --text-mono:  #8bafd8;
+
+            --accent:     #00d4ff;
+            --accent-dim: #004d5e;
+
+            --proto-tcp:  #3b82f6;
+            --proto-udp:  #a855f7;
+            --proto-http: #22c55e;
+            --proto-dns:  #f59e0b;
+            --proto-tls:  #06b6d4;
+            --proto-icmp: #f97316;
+            --proto-arp:  #ec4899;
+            --proto-other:#6b7fa3;
+
+            --stat-green: #10b981;
+            --stat-red:   #ef4444;
+            --stat-blue:  #60a5fa;
+            --stat-amber: #f59e0b;
+
+            --radius:     4px;
+            --font-ui:    'Inter', sans-serif;
+            --font-mono:  'JetBrains Mono', monospace;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-ui);
+            background: var(--bg-root);
+            color: var(--text-pri);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ── TOP BAR ── */
+        .topbar {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            height: 48px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-panel);
+            padding: 0 16px;
+            flex-shrink: 0;
+        }
+
+        .topbar-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-right: 24px;
+            border-right: 1px solid var(--border);
+            margin-right: 16px;
+        }
+
+        .logo-icon {
+            width: 28px; height: 28px;
+            position: relative;
+        }
+
+        .logo-icon svg { width: 100%; height: 100%; }
+
+        .logo-text {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent);
+            letter-spacing: 0.08em;
+            white-space: nowrap;
+        }
+
+        .logo-sub {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .topbar-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .interface-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 0 10px 0 8px;
+            height: 32px;
+        }
+
+        .interface-wrap label {
+            font-size: 10px;
+            font-family: var(--font-mono);
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        select {
+            background: transparent;
+            border: none;
+            color: var(--text-mono);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            outline: none;
+            cursor: pointer;
+            min-width: 140px;
+        }
+
+        select option { background: var(--bg-card); }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
+            padding: 0 14px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-hi);
+            background: var(--bg-card);
+            color: var(--text-pri);
+            font-family: var(--font-ui);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .btn:hover { background: var(--bg-hover); border-color: var(--border-hi); }
+
+        .btn-capture {
+            background: #0d2b1d;
+            border-color: #1a5c38;
+            color: #4ade80;
+        }
+        .btn-capture:hover { background: #14472e; }
+        .btn-capture.active {
+            background: #2b0d0d;
+            border-color: #7f1d1d;
+            color: #f87171;
+        }
+        .btn-capture.active:hover { background: #3b1212; }
+
+        .btn-capture .dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: #4ade80;
+            flex-shrink: 0;
+        }
+        .btn-capture.active .dot {
+            background: #f87171;
+            animation: pulse-red 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .topbar-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ── STATUS BAR ── */
+        .statusbar {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            height: 30px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-panel);
+            padding: 0 16px;
+            flex-shrink: 0;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0 16px;
+            border-right: 1px solid var(--border);
+            height: 100%;
+        }
+
+        .status-item:first-child { padding-left: 0; }
+
+        .status-label {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .status-value {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-mono);
+            min-width: 60px;
+        }
+
+        .status-value.green { color: var(--stat-green); }
+        .status-value.red   { color: var(--stat-red); }
+        .status-value.blue  { color: var(--stat-blue); }
+        .status-value.amber { color: var(--stat-amber); }
+
+        .status-led {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--text-dim);
+            flex-shrink: 0;
+        }
+        .status-led.online { background: var(--stat-green); box-shadow: 0 0 6px var(--stat-green); }
+        .status-led.capturing { background: var(--stat-red); animation: pulse-red 1s ease-in-out infinite; box-shadow: 0 0 6px var(--stat-red); }
+
+        /* ── MAIN LAYOUT ── */
+        .workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            width: 220px;
+            flex-shrink: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg-panel);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-section {
+            border-bottom: 1px solid var(--border);
+            padding: 12px;
+        }
+
+        .sidebar-title {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin-bottom: 10px;
+        }
+
+        /* Protocol breakdown */
+        .proto-list { display: flex; flex-direction: column; gap: 6px; }
+
+        .proto-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .proto-badge {
+            width: 42px;
+            text-align: center;
+            font-family: var(--font-mono);
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            padding: 2px 4px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .proto-bar-wrap {
+            flex: 1;
+            height: 4px;
+            background: var(--bg-card);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .proto-bar { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+
+        .proto-count {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--text-sec-real);
+            width: 32px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        /* Minimap / sparkline */
+        .traffic-graph {
+            height: 56px;
+            position: relative;
+        }
+
+        #trafficCanvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Filter */
+        .filter-wrap {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .filter-input-wrap {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 0 8px;
+            height: 28px;
+            transition: border-color 0.15s;
+        }
+
+        .filter-input-wrap:focus-within { border-color: var(--accent-dim); }
+
+        .filter-input-wrap svg { color: var(--text-dim); flex-shrink: 0; }
+
+        .filter-input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-mono);
+            font-family: var(--font-mono);
+            font-size: 11px;
+            width: 100%;
+        }
+
+        .filter-input::placeholder { color: var(--text-dim); }
+
+        /* ── PACKET PANE ── */
+        .packet-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .pane-header {
+            height: 34px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-panel);
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .pane-title {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+
+        .packet-count {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--accent);
+        }
+
+        .table-scroll {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: auto;
+        }
+
+        /* Scrollbar */
+        .table-scroll::-webkit-scrollbar { width: 6px; }
+        .table-scroll::-webkit-scrollbar-track { background: var(--bg-panel); }
+        .table-scroll::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 3px; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        thead { position: sticky; top: 0; z-index: 10; }
+
+        thead tr {
+            background: var(--bg-card);
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            padding: 8px 12px;
+            font-family: var(--font-mono);
+            font-size: 9px;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            text-align: left;
+            white-space: nowrap;
+            user-select: none;
+        }
+
+        th.sortable { cursor: pointer; }
+        th.sortable:hover { color: var(--text-sec-real); }
+
+        tbody tr {
+            border-bottom: 1px solid rgba(30, 39, 54, 0.6);
+            transition: background 0.08s;
+            cursor: pointer;
+        }
+
+        tbody tr:hover { background: var(--bg-hover); }
+        tbody tr.selected { background: #1a2540 !important; border-left: 2px solid var(--accent); }
+        tbody tr.enforced-drop { opacity: 0.4; background: rgba(239, 68, 68, 0.05) !important; text-decoration: line-through; }
+        tbody tr.enforced-anomaly { border-left: 2px solid var(--stat-amber); background: rgba(245, 158, 11, 0.03); }
+
+        tbody tr.new-packet { animation: flash-in 0.3s ease; }
+
+        @keyframes flash-in {
+            from { background: rgba(0, 212, 255, 0.08); }
+            to   { background: transparent; }
+        }
+
+        td {
+            padding: 7px 12px;
+            font-family: var(--font-mono);
+            font-size: 11.5px;
+            white-space: nowrap;
+            color: var(--text-mono);
+        }
+
+        .td-num { color: var(--text-dim); font-size: 10px; }
+        .td-time { color: var(--text-sec-real); }
+        .td-ip { color: var(--text-pri); }
+        .td-ip.src { color: #7dd3fc; }
+        .td-ip.dst { color: #86efac; }
+        .td-size { color: var(--text-sec-real); }
+        .td-desc { color: #94a3b8; font-size: 11px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Protocol badges in table */
+        .proto-tag {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-mono);
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            padding: 2px 6px;
+            border-radius: 2px;
+            min-width: 44px;
+        }
+
+        /* Arrow between IPs */
+        .arrow { color: var(--text-dim); margin: 0 4px; }
+
+        /* ── DETAIL PANEL ── */
+        .detail-panel {
+            height: 180px;
+            flex-shrink: 0;
+            border-top: 1px solid var(--border);
+            background: var(--bg-panel);
+            display: flex;
+            overflow: hidden;
+        }
+
+        .detail-section {
+            flex: 1;
+            padding: 10px 14px;
+            overflow-y: auto;
+            border-right: 1px solid var(--border);
+        }
+
+        .detail-section:last-child { border-right: none; }
+
+        .detail-section::-webkit-scrollbar { width: 4px; }
+        .detail-section::-webkit-scrollbar-track { background: transparent; }
+        .detail-section::-webkit-scrollbar-thumb { background: var(--border); }
+
+        .detail-heading {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .detail-heading::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .detail-tree { display: flex; flex-direction: column; gap: 3px; }
+
+        .detail-item {
+            font-family: var(--font-mono);
+            font-size: 10.5px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .detail-key { color: var(--text-dim); flex-shrink: 0; }
+        .detail-val { color: var(--text-mono); }
+        .detail-val.accent { color: var(--accent); }
+        .detail-val.green  { color: var(--stat-green); }
+        .detail-val.amber  { color: var(--stat-amber); }
+
+        /* Firewall Control Actions Inline */
+        .action-deck {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+            padding-top: 6px;
+            border-top: 1px dashed var(--border);
+        }
+        .btn-action {
+            height: 22px;
+            padding: 0 8px;
+            font-size: 9px;
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .btn-allow { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); color: var(--stat-green); }
+        .btn-allow:hover { background: rgba(16, 185, 129, 0.2); }
+        .btn-drop { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: var(--stat-red); }
+        .btn-drop:hover { background: rgba(239, 68, 68, 0.2); }
+        .btn-anomaly { background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3); color: var(--stat-amber); }
+        .btn-anomaly:hover { background: rgba(245, 158, 11, 0.2); }
+
+        /* Hex dump */
+        .hex-dump {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            line-height: 1.7;
+            color: var(--text-dim);
+        }
+
+        .hex-line { display: flex; gap: 12px; }
+        .hex-offset { color: var(--text-dim); opacity: 0.5; min-width: 36px; }
+        .hex-bytes { color: #5b7fa8; letter-spacing: 0.06em; }
+        .hex-bytes span.hi { color: var(--accent); }
+        .hex-ascii { color: #3a5070; }
+
+        /* Empty state */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 60px 20px;
+            color: var(--text-dim);
+        }
+
+        .empty-icon { opacity: 0.2; }
+
+        .empty-state p {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--text-dim);
+            text-align: center;
+        }
+
+        /* Util */
+        .flex-gap { display: flex; align-items: center; gap: 8px; }
+        .ml-auto { margin-left: auto; }
+        .hidden { display: none !important; }
+
+        /* Color helpers for protocols */
+        .p-tcp  { background: rgba(59,130,246,0.15); color: #93c5fd; }
+        .p-udp  { background: rgba(168,85,247,0.15); color: #d8b4fe; }
+        .p-http { background: rgba(34,197,94,0.15);  color: #86efac; }
+        .p-dns  { background: rgba(245,158,11,0.15); color: #fcd34d; }
+        .p-tls  { background: rgba(6,182,212,0.15);  color: #67e8f9; }
+        .p-icmp { background: rgba(249,115,22,0.15); color: #fdba74; }
+        .p-arp  { background: rgba(236,72,153,0.15); color: #f9a8d4; }
+        .p-other{ background: rgba(107,127,163,0.12);color: #94a3b8; }
+
+        .blink { animation: blink 1.2s step-end infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <div class="topbar-logo">
+        <div class="logo-icon">
+            <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="14" cy="14" r="13" stroke="#00d4ff" stroke-width="1.5" stroke-dasharray="3 2"/>
+                <circle cx="14" cy="14" r="5" fill="#00d4ff" opacity="0.2"/>
+                <circle cx="14" cy="14" r="2.5" fill="#00d4ff"/>
+                <line x1="14" y1="1" x2="14" y2="7" stroke="#00d4ff" stroke-width="1.2" opacity="0.5"/>
+                <line x1="14" y1="21" x2="14" y2="27" stroke="#00d4ff" stroke-width="1.2" opacity="0.5"/>
+                <line x1="1" y1="14" x2="7" y2="14" stroke="#00d4ff" stroke-width="1.2" opacity="0.5"/>
+                <line x1="21" y1="14" x2="27" y2="14" stroke="#00d4ff" stroke-width="1.2" opacity="0.5"/>
+            </svg>
+        </div>
+        <div>
+            <div class="logo-text">PROJECT ROCK</div>
+            <div class="logo-sub">Network Monitor</div>
+        </div>
+    </div>
+
+    <div class="topbar-controls">
+        <div class="interface-wrap">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-dim)">
+                <rect x="2" y="6" width="20" height="12" rx="2"/><path d="M22 12H18M6 12H2M18 12V8M6 12V16"/>
+            </svg>
+            <label for="adapterSelect">Interface</label>
+            <select id="adapterSelect">
+                {% for adapter in adapters %}
+                    <option value="{{ adapter }}">{{ adapter }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button class="btn btn-capture" id="toggleBtn" onclick="toggleCapture()">
+            <span class="dot"></span>
+            <span id="toggleLabel">Start Capture</span>
+        </button>
+
+        <div class="filter-wrap" style="padding:0; border:none;">
+            <div class="filter-input-wrap" style="width:260px;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                </svg>
+                <input type="text" class="filter-input" id="filterInput" placeholder="ip.src == 192.168.x.x or proto == TCP" oninput="applyFilter()">
+            </div>
+        </div>
+    </div>
+
+    <div class="topbar-right">
+        <a href="/download/" class="btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Export PCAP
+        </a>
+    </div>
+</header>
+
+<div class="statusbar">
+    <div class="status-item">
+        <span class="status-led" id="statusLed"></span>
+        <span class="status-label">Status</span>
+        <span class="status-value" id="statusText">Idle</span>
+    </div>
+    <div class="status-item">
+        <span class="status-label">Packets</span>
+        <span class="status-value blue" id="statTotal">0</span>
+    </div>
+    <div class="status-item">
+        <span class="status-label">Displayed</span>
+        <span class="status-value" id="statDisplayed">0</span>
+    </div>
+    <div class="status-item">
+        <span class="status-label">Throughput</span>
+        <span class="status-value green" id="statThroughput">0 B/s</span>
+    </div>
+    <div class="status-item">
+        <span class="status-label">Dropped</span>
+        <span class="status-value red" id="statDropped">0</span>
+    </div>
+    <div class="status-item">
+        <span class="status-label">Duration</span>
+        <span class="status-value amber" id="statDuration">00:00:00</span>
+    </div>
+</div>
+
+<div class="workspace">
+
+    <aside class="sidebar">
+
+        <div class="sidebar-section">
+            <div class="sidebar-title">Protocol Breakdown</div>
+            <div class="proto-list" id="protoBreakdown">
+                <div class="proto-row">
+                    <span class="proto-badge p-tcp">TCP</span>
+                    <div class="proto-bar-wrap"><div class="proto-bar" id="bar-tcp" style="width:0%;background:#3b82f6"></div></div>
+                    <span class="proto-count" id="cnt-tcp">0</span>
+                </div>
+                <div class="proto-row">
+                    <span class="proto-badge p-udp">UDP</span>
+                    <div class="proto-bar-wrap"><div class="proto-bar" id="bar-udp" style="width:0%;background:#a855f7"></div></div>
+                    <span class="proto-count" id="cnt-udp">0</span>
+                </div>
+                <div class="proto-row">
+                    <span class="proto-badge p-http">HTTP</span>
+                    <div class="proto-bar-wrap"><div class="proto-bar" id="bar-http" style="width:0%;background:#22c55e"></div></div>
+                    <span class="proto-count" id="cnt-http">0</span>
+                </div>
+                <div class="proto-row">
+                    <span class="proto-badge p-dns">DNS</span>
+                    <div class="proto-bar-wrap"><div class="proto-bar" id="bar-dns" style="width:0%;background:#f59e0b"></div></div>
+                    <span class="proto-count" id="cnt-dns">0</span>
+                </div>
+                <div class="proto-row">
+                    <span class="proto-badge p-tls">TLS</span>
+                    <div class="proto-bar-wrap"><div class="proto-bar" id="bar-tls" style="width:0%;background:#06b6d4"></div></div>
+                    <span class="proto-count" id="cnt-tls">0</span>
+                </div>
+                <div class="proto-row">
+                    <span class="proto-badge p-icmp">ICMP</span>
+                    <div class="proto-bar-wrap"><div class="proto-bar" id="bar-icmp" style="width:0%;background:#f97316"></div></div>
+                    <span class="proto-count" id="cnt-icmp">0</span>
+                </div>
+                <div class="proto-row">
+                    <span class="proto-badge p-arp">ARP</span>
+                    <div class="proto-bar-wrap"><div class="proto-bar" id="bar-arp" style="width:0%;background:#ec4899"></div></div>
+                    <span class="proto-count" id="cnt-arp">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-title">Traffic (last 60s)</div>
+            <div class="traffic-graph">
+                <canvas id="trafficCanvas"></canvas>
+            </div>
+        </div>
+
+        <div class="sidebar-section" style="flex:1;">
+            <div class="sidebar-title">Top Talkers</div>
+            <div id="topTalkers" style="display:flex;flex-direction:column;gap:5px;font-family:var(--font-mono);font-size:10px;color:var(--text-secreal);">
+                <span style="color:var(--text-dim);">No data yet.</span>
+            </div>
+        </div>
+    </aside>
+
+    <div class="packet-pane">
+        <div class="pane-header">
+            <span class="pane-title">Packet Stream</span>
+            <span class="packet-count" id="packetCount">0 packets</span>
+            <div class="ml-auto flex-gap">
+                <label style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);display:flex;align-items:center;gap:5px;cursor:pointer;">
+                    <input type="checkbox" id="autoScroll" checked style="accent-color:var(--accent);"> Auto-scroll
+                </label>
+                <button class="btn" style="height:26px;font-size:11px;" onclick="clearTable()">Clear</button>
+            </div>
+        </div>
+
+        <div class="table-scroll" id="tableScroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:48px;">#</th>
+                        <th class="sortable" style="width:90px;">Time</th>
+                        <th style="width:140px;">Source</th>
+                        <th style="width:20px;"></th>
+                        <th style="width:140px;">Destination</th>
+                        <th style="width:70px;">Protocol</th>
+                        <th style="width:70px;">Length</th>
+                        <th>Info</th>
+                    </tr>
+                </thead>
+                <tbody id="packet-rows">
+                </tbody>
+            </table>
+            <div id="emptyState" class="empty-state">
+                <div class="empty-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                    </svg>
+                </div>
+                <p>No packets captured yet.<br>Select an interface and press Start Capture.</p>
+            </div>
+        </div>
+
+        <div class="detail-panel" id="detailPanel">
+            <div class="detail-section">
+                <div class="detail-heading">Frame Details</div>
+                <div class="detail-tree" id="detailTree">
+                    <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);">Select a packet to inspect.</span>
+                </div>
+            </div>
+            <div class="detail-section" style="flex:0.9;">
+                <div class="detail-heading">Hex Dump</div>
+                <div class="hex-dump" id="hexDump">
+                    <span style="color:var(--text-dim);font-size:10px;">—</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────
+let isCapturing = false;
+let eventSource = null;
+let allPackets = [];
+let packetSeq = 0;
+let captureStart = null;
+let durationInterval = null;
+let throughputBytes = 0;
+let throughputInterval = null;
+let selectedRow = null;
+let totalDroppedCount = 0;
+
+const protoCounts = { TCP:0, UDP:0, HTTP:0, DNS:0, TLS:0, ICMP:0, ARP:0 };
+const ipCounts = {};
+const trafficHistory = new Array(60).fill(0);
+let trafficTick = 0;
+let trafficTickBytes = 0;
+
+// ── PROTO HELPERS ──────────────────────────────────────────────────────
+function protoClass(p) {
+    const m = { TCP:'p-tcp', UDP:'p-udp', HTTP:'p-http', DNS:'p-dns', TLS:'p-tls', ICMP:'p-icmp', ARP:'p-arp' };
+    return m[p?.toUpperCase()] || 'p-other';
+}
+
+function updateProtoBars() {
+    const total = Object.values(protoCounts).reduce((a, b) => a + b, 0) || 1;
+    for (const [p, c] of Object.entries(protoCounts)) {
+        const bar = document.getElementById('bar-' + p.toLowerCase());
+        const cnt = document.getElementById('cnt-' + p.toLowerCase());
+        if (bar) bar.style.width = (c / total * 100) + '%';
+        if (cnt) cnt.textContent = c > 999 ? (c/1000).toFixed(1)+'k' : c;
+    }
+}
+
+// ── TRAFFIC CANVAS ─────────────────────────────────────────────────────
+const canvas = document.getElementById('trafficCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+    canvas.width = canvas.offsetWidth * devicePixelRatio;
+    canvas.height = canvas.offsetHeight * devicePixelRatio;
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+    drawTrafficGraph();
+}
+
+function drawTrafficGraph() {
+    const w = canvas.offsetWidth, h = canvas.offsetHeight;
+    ctx.clearRect(0, 0, w, h);
+
+    if (trafficHistory.every(v => v === 0)) {
+        ctx.fillStyle = 'rgba(0,212,255,0.1)';
+        ctx.fillRect(0, h - 1, w, 1);
+        return;
+    }
+
+    const max = Math.max(...trafficHistory, 1);
+    const step = w / (trafficHistory.length - 1);
+
+    ctx.beginPath();
+    trafficHistory.forEach((v, i) => {
+        const x = i * step;
+        const y = h - (v / max) * (h - 4) - 2;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, 'rgba(0,212,255,0.5)');
+    grad.addColorStop(1, 'rgba(0,212,255,0)');
+
+    ctx.strokeStyle = '#00d4ff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath();
+    ctx.fillStyle = grad; ctx.fill();
+}
+
+// ── TOP TALKERS ────────────────────────────────────────────────────────
+function updateTopTalkers() {
+    const sorted = Object.entries(ipCounts).sort((a,b) => b[1]-a[1]).slice(0,5);
+    const el = document.getElementById('topTalkers');
+    if (!sorted.length) { el.innerHTML = '<span style="color:var(--text-dim);">No data yet.</span>'; return; }
+    const max = sorted[0][1] || 1;
+    el.innerHTML = sorted.map(([ip, c]) => `
+        <div style="display:flex;flex-direction:column;gap:2px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:var(--text-mono);">${ip}</span>
+                <span style="color:var(--text-dim);">${c}</span>
+            </div>
+            <div style="height:2px;background:var(--border);border-radius:1px;">
+                <div style="height:100%;width:${c/max*100}%;background:var(--accent);border-radius:1px;opacity:0.6;"></div>
+            </div>
+        </div>`).join('');
+}
+
+// ── PACKET ROW ─────────────────────────────────────────────────────────
+function makeRow(data) {
+    const tr = document.createElement('tr');
+    tr.className = 'new-packet';
+    tr.dataset.id = data._id;
+
+    const pc = protoClass(data.proto);
+    tr.innerHTML = `
+        <td class="td-num">${data._id}</td>
+        <td class="td-time">${data.time}</td>
+        <td class="td-ip src">${data.src || '—'}</td>
+        <td class="arrow" style="color:var(--text-dim);padding:0 2px;">→</td>
+        <td class="td-ip dst">${data.dst || '—'}</td>
+        <td><span class="proto-tag ${pc}">${(data.proto || 'OTHER').toUpperCase()}</span></td>
+        <td class="td-size">${data.size || '—'}</td>
+        <td class="td-desc">${data.desc || ''}</td>
+    `;
+    tr.addEventListener('click', () => selectPacket(tr, data));
+    return tr;
+}
+
+// ── SELECT PACKET ──────────────────────────────────────────────────────
+function selectPacket(tr, data) {
+    if (selectedRow) selectedRow.classList.remove('selected');
+    selectedRow = tr;
+    tr.classList.add('selected');
+    renderDetail(data);
+}
+
+function renderDetail(d) {
+    const tree = document.getElementById('detailTree');
+    tree.innerHTML = `
+        <div class="detail-item"><span class="detail-key">Frame&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="detail-val accent">#${d._id}</span></div>
+        <div class="detail-item"><span class="detail-key">Time&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="detail-val">${d.time}</span></div>
+        <div class="detail-item"><span class="detail-key">Protocol </span><span class="detail-val accent">${d.proto || '—'}</span></div>
+        <div class="detail-item"><span class="detail-key">Src IP&nbsp;&nbsp;&nbsp;</span><span class="detail-val green">${d.src || '—'}</span></div>
+        <div class="detail-item"><span class="detail-key">Dst IP&nbsp;&nbsp;&nbsp;</span><span class="detail-val amber">${d.dst || '—'}</span></div>
+        <div class="detail-item"><span class="detail-key">Length&nbsp;&nbsp;&nbsp;</span><span class="detail-val">${d.size || '—'}</span></div>
+        <div class="detail-item"><span class="detail-key">Info&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span class="detail-val">${d.desc || '—'}</span></div>
+        <div class="action-deck">
+            <button class="btn btn-action btn-allow" onclick="handlePolicyAction('${d.src}', '${d.dst}', 'ALLOW', ${d._id})">Allow</button>
+            <button class="btn btn-action btn-drop" onclick="handlePolicyAction('${d.src}', '${d.dst}', 'DROP', ${d._id})">Drop</button>
+            <button class="btn btn-action btn-anomaly" onclick="handlePolicyAction('${d.src}', '${d.dst}', 'ANOMALY', ${d._id})">Anomaly</button>
+        </div>
+    `;
+
+    const hex = document.getElementById('hexDump');
+    hex.innerHTML = generateHexDump(d);
+}
+
+// ── FIREWALL ENFORCEMENT INTERACTION ───────────────────────────────────
+function handlePolicyAction(srcIp, dstIp, policyType, frameId) {
+    // Send tracking execution call out to backend endpoints
+    fetch('/toggle/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ src: srcIp, dst: dstIp, action: 'POLICY', policy: policyType })
+    })
+    .then(res => res.json())
+    .then(data => {
+        const row = document.querySelector(`tr[data-id="${frameId}"]`);
+        if (!row) return;
+
+        if (policyType === 'DROP') {
+            row.classList.remove('enforced-anomaly');
+            row.classList.add('enforced-drop');
+            totalDroppedCount++;
+            document.getElementById('statDropped').textContent = totalDroppedCount;
+        } else if (policyType === 'ANOMALY') {
+            row.classList.remove('enforced-drop');
+            row.classList.add('enforced-anomaly');
+        } else if (policyType === 'ALLOW') {
+            if (row.classList.contains('enforced-drop')) {
+                totalDroppedCount = Math.max(0, totalDroppedCount - 1);
+                document.getElementById('statDropped').textContent = totalDroppedCount;
+            }
+            row.classList.remove('enforced-drop', 'enforced-anomaly');
+        }
+    })
+    .catch(err => console.error("Policy execution failure:", err));
+}
+
+function generateHexDump(d) {
+    const seed = (d._id || 0) * 17;
+    const len = Math.min(48, parseInt(d.size) || 48);
+    let lines = '';
+    for (let i = 0; i < len; i += 8) {
+        const offset = i.toString(16).padStart(4, '0');
+        let bytes = '', ascii = '';
+        for (let j = 0; j < 8 && i+j < len; j++) {
+            const v = ((seed * (i+j+1) * 31 + 7) & 0xff);
+            const h = v.toString(16).padStart(2,'0');
+            const isHi = j < 4;
+            bytes += `<span${isHi ? ' class="hi"' : ''}>${h}</span> `;
+            ascii += (v >= 32 && v < 127) ? String.fromCharCode(v) : '.';
+        }
+        lines += `<div class="hex-line"><span class="hex-offset">${offset}</span><span class="hex-bytes">${bytes}</span><span class="hex-ascii">${ascii}</span></div>`;
+    }
+    return lines;
+}
+
+// ── FILTER ─────────────────────────────────────────────────────────────
+function applyFilter() {
+    const raw = document.getElementById('filterInput').value.trim().toLowerCase();
+    const rows = document.querySelectorAll('#packet-rows tr');
+    let visible = 0;
+    rows.forEach(tr => {
+        const text = tr.textContent.toLowerCase();
+        const show = !raw || text.includes(raw) || matchBpf(raw, tr.dataset.id);
+        tr.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    document.getElementById('statDisplayed').textContent = visible;
+    document.getElementById('packetCount').textContent = visible + ' / ' + allPackets.length + ' packets';
+}
+
+function matchBpf(expr, id) { return false; } 
+
+// ── TOGGLE CAPTURE ─────────────────────────────────────────────────────
+function toggleCapture() {
+    const select = document.getElementById('adapterSelect');
+    const btn = document.getElementById('toggleBtn');
+    const label = document.getElementById('toggleLabel');
+
+    if (!isCapturing) {
+        fetch('/toggle/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+            body: JSON.stringify({ adapter: select.value, action: 'START' })
+        }).then(r => r.json()).then(() => {
+            isCapturing = true;
+            btn.classList.add('active');
+            label.textContent = 'Stop Capture';
+            select.disabled = true;
+
+            document.getElementById('statusLed').className = 'status-led capturing';
+            document.getElementById('statusText').textContent = 'Capturing';
+
+            captureStart = Date.now();
+            durationInterval = setInterval(updateDuration, 1000);
+            throughputInterval = setInterval(updateThroughput, 1000);
+            setInterval(() => {
+                trafficHistory.push(trafficTickBytes);
+                if (trafficHistory.length > 60) trafficHistory.shift();
+                trafficTickBytes = 0;
+                drawTrafficGraph();
+            }, 1000);
+
+            startEventStream();
+        });
+    } else {
+        fetch('/toggle/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+            body: JSON.stringify({ action: 'STOP' })
+        }).then(r => r.json()).then(() => {
+            isCapturing = false;
+            btn.classList.remove('active');
+            label.textContent = 'Start Capture';
+            select.disabled = false;
+
+            document.getElementById('statusLed').className = 'status-led';
+            document.getElementById('statusText').textContent = 'Idle';
+
+            clearInterval(durationInterval);
+            clearInterval(throughputInterval);
+            if (eventSource) eventSource.close();
+        });
+    }
+}
+
+// ── STREAM ─────────────────────────────────────────────────────────────
+function startEventStream() {
+    eventSource = new EventSource('/stream/');
+    eventSource.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        data._id = ++packetSeq;
+        allPackets.push(data);
+
+        const pk = (data.proto || 'other').toUpperCase();
+        if (protoCounts.hasOwnProperty(pk)) protoCounts[pk]++;
+
+        if (data.src) ipCounts[data.src] = (ipCounts[data.src] || 0) + 1;
+        if (data.dst) ipCounts[data.dst] = (ipCounts[data.dst] || 0) + 1;
+
+        const bytes = parseInt(data.size) || 0;
+        throughputBytes += bytes;
+        trafficTickBytes += bytes;
+
+        const tbody = document.getElementById('packet-rows');
+        const empty = document.getElementById('emptyState');
+        empty.classList.add('hidden');
+
+        const row = makeRow(data);
+        tbody.insertBefore(row, tbody.firstChild);
+
+        if (tbody.children.length > 500) tbody.removeChild(tbody.lastChild);
+
+        if (document.getElementById('autoScroll').checked) {
+            const scroll = document.getElementById('tableScroll');
+            scroll.scrollTop = 0;
+        }
+
+        document.getElementById('statTotal').textContent = packetSeq;
+        document.getElementById('statDisplayed').textContent = tbody.children.length;
+        document.getElementById('packetCount').textContent = packetSeq + ' packets';
+
+        updateProtoBars();
+        if (packetSeq % 5 === 0) updateTopTalkers();
+    };
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────
+function updateDuration() {
+    if (!captureStart) return;
+    const s = Math.floor((Date.now() - captureStart) / 1000);
+    const h = String(Math.floor(s / 3600)).padStart(2,'0');
+    const m = String(Math.floor((s % 3600) / 60)).padStart(2,'0');
+    const sec = String(s % 60).padStart(2,'0');
+    document.getElementById('statDuration').textContent = `${h}:${m}:${sec}`;
+}
+
+function updateThroughput() {
+    const v = throughputBytes;
+    throughputBytes = 0;
+    let label;
+    if (v >= 1048576) label = (v/1048576).toFixed(1) + ' MB/s';
+    else if (v >= 1024) label = (v/1024).toFixed(1) + ' KB/s';
+    else label = v + ' B/s';
+    document.getElementById('statThroughput').textContent = label;
+}
+
+function clearTable() {
+    document.getElementById('packet-rows').innerHTML = '';
+    document.getElementById('emptyState').classList.remove('hidden');
+    allPackets = [];
+    packetSeq = 0;
+    totalDroppedCount = 0;
+    Object.keys(protoCounts).forEach(k => protoCounts[k] = 0);
+    Object.keys(ipCounts).forEach(k => delete ipCounts[k]);
+    updateProtoBars();
+    updateTopTalkers();
+    document.getElementById('statTotal').textContent = '0';
+    document.getElementById('statDropped').textContent = '0';
+    document.getElementById('statDisplayed').textContent = '0';
+    document.getElementById('packetCount').textContent = '0 packets';
+    document.getElementById('detailTree').innerHTML = '<span style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);">Select a packet to inspect.</span>';
+    document.getElementById('hexDump').innerHTML = '<span style="color:var(--text-dim);font-size:10px;">—</span>';
+}
+
+window.addEventListener('load', () => {
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+});
+</script>
+</body>
+</html>

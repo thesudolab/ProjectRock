@@ -1,0 +1,1 @@
+# Models omitted to minimize db footprint. State is tracked directly via kernel netfilter.
